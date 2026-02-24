@@ -1,32 +1,55 @@
 # Claudeception
 
-Every time you use an AI coding agent, it starts from zero. You spend an hour debugging some obscure error, the agent figures it out, session ends. Next time you hit the same issue? Another hour.
+A customized fork of [blader/Claudeception](https://github.com/blader/Claudeception) — a continuous learning system that extracts reusable knowledge from work sessions and codifies it into Claude Code skills.
 
-This skill fixes that. When Claude Code discovers something non-obvious (a debugging technique, a workaround, some project-specific pattern), it saves that knowledge as a new skill. Next time a similar problem comes up, the skill gets loaded automatically.
+Every time you use an AI coding agent, it starts from zero. You spend an hour debugging some obscure error, the agent figures it out, session ends. Next time you hit the same issue? Another hour. This skill fixes that by persisting discoveries as reusable skills.
+
+## Changes from Upstream
+
+This fork customizes the original Claudeception with:
+
+1. **Skill-authoring integration** — delegates skill creation to the [skill-authoring](https://github.com/abhattacherjee/skill-authoring) skill for consistent structure, frontmatter conventions, and quality checks
+2. **Existing skills check (Step 1)** — before creating a new skill, searches project and user-level skill directories to decide: create new, update existing, or add cross-references
+3. **Project artifact updates (Step 5)** — after saving a skill, updates CHANGELOG.md and uses appropriate commit prefixes (`docs(skills):` or `fix(skills):`)
+4. **Streamlined frontmatter** — uses `metadata.version` instead of top-level `version`, removes `author`, `date`, `tags`, and `allowed-tools` fields per Anthropic best practices
+5. **Concise research section** — replaced verbose search instructions with a one-liner strategy
+6. **See Also cross-references** — links to `skill-authoring` and Anthropic's official docs
+
+The original's core concepts (trigger conditions, quality gates, automatic/explicit modes, retrospective) are preserved unchanged.
 
 ## Installation
 
-### Step 1: Clone the skill
+### Individual repo (recommended)
 
-**User-level (recommended)**
-
-```bash
-git clone https://github.com/blader/Claudeception.git ~/.claude/skills/claudeception
-```
-
-**Project-level**
+**User-level** (available in all projects):
 
 ```bash
-git clone https://github.com/blader/Claudeception.git .claude/skills/claudeception
+# macOS / Linux
+git clone https://github.com/abhattacherjee/claudeception.git ~/.claude/skills/claudeception
+
+# Windows
+git clone https://github.com/abhattacherjee/claudeception.git %USERPROFILE%\.claude\skills\claudeception
 ```
 
-### Step 2: Set up the activation hook (recommended)
+**Project-level** (available only in one project):
 
-The skill can activate via semantic matching, but a hook ensures it evaluates every session for extractable knowledge.
+```bash
+git clone https://github.com/abhattacherjee/claudeception.git .claude/skills/claudeception
+```
 
-#### User-level setup (recommended)
+### Via monorepo (all skills)
 
-1. Create the hooks directory and copy the script:
+```bash
+git clone https://github.com/abhattacherjee/claude-code-skills.git /tmp/claude-code-skills
+cp -r /tmp/claude-code-skills/claudeception ~/.claude/skills/claudeception
+rm -rf /tmp/claude-code-skills
+```
+
+### Set up the activation hook (recommended)
+
+The skill activates via semantic matching, but a hook ensures it evaluates every session for extractable knowledge.
+
+1. Copy the activator script:
 
 ```bash
 mkdir -p ~/.claude/hooks
@@ -34,7 +57,7 @@ cp ~/.claude/skills/claudeception/scripts/claudeception-activator.sh ~/.claude/h
 chmod +x ~/.claude/hooks/claudeception-activator.sh
 ```
 
-2. Add the hook to your global Claude settings (`~/.claude/settings.json`):
+2. Add the hook to your Claude settings (`~/.claude/settings.json`):
 
 ```json
 {
@@ -53,63 +76,35 @@ chmod +x ~/.claude/hooks/claudeception-activator.sh
 }
 ```
 
-#### Project-level setup
-
-1. Create the hooks directory inside your project and copy the script:
+## Updating
 
 ```bash
-mkdir -p .claude/hooks
-cp .claude/skills/claudeception/scripts/claudeception-activator.sh .claude/hooks/
-chmod +x .claude/hooks/claudeception-activator.sh
+git -C ~/.claude/skills/claudeception pull
 ```
 
-2. Add the hook to your project settings (`.claude/settings.json` in the repo):
+## Uninstall
 
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/claudeception-activator.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
+```bash
+rm -rf ~/.claude/skills/claudeception
 ```
-
-If you already have a `settings.json`, merge the `hooks` configuration into it.
-
-The hook injects a reminder on every prompt that tells Claude to evaluate whether the current task produced extractable knowledge. This achieves higher activation rates than relying on semantic description matching alone.
 
 ## Usage
 
 ### Automatic Mode
 
 The skill activates automatically when Claude Code:
-- Just completed debugging and discovered a non-obvious solution
+- Completed debugging with a non-obvious solution
 - Found a workaround through investigation or trial-and-error
 - Resolved an error where the root cause wasn't immediately apparent
-- Learned project-specific patterns or configurations through investigation
-- Completed any task where the solution required meaningful discovery
+- Learned project-specific patterns through investigation
 
 ### Explicit Mode
-
-Trigger a learning retrospective:
 
 ```
 /claudeception
 ```
 
-Or explicitly request skill extraction:
-
-```
-Save what we just learned as a skill
-```
+Or: `Save what we just learned as a skill`
 
 ### What Gets Extracted
 
@@ -119,56 +114,18 @@ Not every task produces a skill. It only extracts knowledge that required actual
 
 The idea comes from academic work on skill libraries for AI agents.
 
-[Voyager](https://arxiv.org/abs/2305.16291) (Wang et al., 2023) showed that game-playing agents can build up libraries of reusable skills over time, and that this helps them avoid re-learning things they already figured out. [CASCADE](https://arxiv.org/abs/2512.23880) (2024) introduced "meta-skills" (skills for acquiring skills), which is what this is. [SEAgent](https://arxiv.org/abs/2508.04700) (2025) showed agents can learn new software environments through trial and error, which inspired the retrospective feature. [Reflexion](https://arxiv.org/abs/2303.11366) (Shinn et al., 2023) showed that self-reflection helps.
-
-Agents that persist what they learn do better than agents that start fresh.
-
-## How It Works
-
-Claude Code has a native skills system. At startup, it loads skill names and descriptions (about 100 tokens each). When you're working, it matches your current context against those descriptions and pulls in relevant skills.
-
-But this retrieval system can be written to, not just read from. So when this skill notices extractable knowledge, it writes a new skill with a description optimized for future retrieval.
-
-The description matters a lot. "Helps with database problems" won't match anything useful. "Fix for PrismaClientKnownRequestError in serverless" will match when someone hits that error.
+[Voyager](https://arxiv.org/abs/2305.16291) (Wang et al., 2023) showed that game-playing agents can build up libraries of reusable skills over time. [CASCADE](https://arxiv.org/abs/2512.23880) (2024) introduced "meta-skills" (skills for acquiring skills), which is what this is. [SEAgent](https://arxiv.org/abs/2508.04700) (2025) showed agents can learn new software environments through trial and error. [Reflexion](https://arxiv.org/abs/2303.11366) (Shinn et al., 2023) showed that self-reflection helps.
 
 More on the skills architecture [here](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills).
 
-## Skill Format
+## Compatibility
 
-Extracted skills are markdown files with YAML frontmatter:
+This skill follows the **Agent Skills** standard — a `SKILL.md` file at the repo root with YAML frontmatter. This format is recognized by:
 
-```yaml
----
-name: prisma-connection-pool-exhaustion
-description: |
-  Fix for PrismaClientKnownRequestError: Too many database connections 
-  in serverless environments (Vercel, AWS Lambda). Use when connection 
-  count errors appear after ~5 concurrent requests.
-author: Claude Code
-version: 1.0.0
-date: 2024-01-15
----
-
-# Prisma Connection Pool Exhaustion
-
-## Problem
-[What this skill solves]
-
-## Context / Trigger Conditions
-[Exact error messages, symptoms, scenarios]
-
-## Solution
-[Step-by-step fix]
-
-## Verification
-[How to confirm it worked]
-```
-
-See `resources/skill-template.md` for the full template.
-
-## Quality Gates
-
-The skill is picky about what it extracts. If something is just a documentation lookup, or only useful for this one case, or hasn't actually been tested, it won't create a skill. Would this actually help someone who hits this problem in six months? If not, no skill.
+- [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) (Anthropic)
+- [Cursor](https://www.cursor.com/)
+- [Codex CLI](https://github.com/openai/codex) (OpenAI)
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli) (Google)
 
 ## Examples
 
@@ -178,10 +135,10 @@ See `examples/` for sample skills:
 - `prisma-connection-pool-exhaustion/`: the "too many connections" serverless problem
 - `typescript-circular-dependency/`: detecting and fixing import cycles
 
-## Contributing
-
-Contributions welcome. Fork, make changes, submit a PR.
-
 ## License
 
-MIT
+[MIT](LICENSE)
+
+## Acknowledgments
+
+Original concept and implementation by [blader](https://github.com/blader/Claudeception).
