@@ -14,6 +14,7 @@ Validates a Claude Code skill directory against quality rules:
   - description: ≤1024 characters, third person, "Use when:" present
   - metadata.version: present and valid semver
   - No non-standard frontmatter fields (author, date, tags are disallowed)
+  - Version matches CHANGELOG.md (if present)
   - Body: ≤500 lines
   - Scripts: executable, #!/usr/bin/env bash shebang, --help support
 
@@ -194,6 +195,23 @@ else
   else
     fail "metadata.version: invalid semver (expected X.Y.Z, got: $VERSION)"
   fi
+fi
+
+# ============================================================
+# 5b. Version matches CHANGELOG.md (if it exists)
+# ============================================================
+CHANGELOG_FILE="$SKILL_DIR/CHANGELOG.md"
+if [[ -n "$VERSION" ]] && [[ -f "$CHANGELOG_FILE" ]]; then
+  CHANGELOG_VERSION=$(grep -oE '\[[0-9]+\.[0-9]+\.[0-9]+\]' "$CHANGELOG_FILE" | head -1 | tr -d '[]')
+  if [[ -z "$CHANGELOG_VERSION" ]]; then
+    warn "CHANGELOG.md exists but has no versioned entry"
+  elif [[ "$VERSION" == "$CHANGELOG_VERSION" ]]; then
+    pass "version matches CHANGELOG.md ($VERSION)"
+  else
+    fail "version mismatch: SKILL.md=$VERSION, CHANGELOG.md=$CHANGELOG_VERSION"
+  fi
+elif [[ -n "$VERSION" ]] && [[ ! -f "$CHANGELOG_FILE" ]]; then
+  warn "no CHANGELOG.md found (recommended for published skills)"
 fi
 
 # ============================================================
