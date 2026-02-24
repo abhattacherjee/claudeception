@@ -1,14 +1,8 @@
 ---
 name: nextjs-server-side-error-debugging
-description: |
-  Debug getServerSideProps and getStaticProps errors in Next.js. Use when: 
-  (1) Page shows generic error but browser console is empty, (2) API routes 
-  return 500 with no details, (3) Server-side code fails silently, (4) Error 
-  only occurs on refresh not client navigation. Check terminal/server logs 
-  instead of browser for actual error messages.
-author: Claude Code
-version: 1.0.0
-date: 2024-01-15
+description: "Debug getServerSideProps and getStaticProps errors in Next.js. Use when: (1) Page shows generic error but browser console is empty, (2) API routes return 500 with no details, (3) Server-side code fails silently, (4) Error only occurs on refresh not client navigation. Check terminal/server logs instead of browser for actual error messages."
+metadata:
+  version: 1.0.0
 ---
 
 # Next.js Server-Side Error Debugging

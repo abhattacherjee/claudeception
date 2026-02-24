@@ -1,24 +1,8 @@
 ---
 name: claudeception
-description: |
-  Claudeception is a continuous learning system that extracts reusable knowledge from work sessions.
-  Triggers: (1) /claudeception command to review session learnings, (2) "save this as a skill"
-  or "extract a skill from this", (3) "what did we learn?", (4) After any task involving
-  non-obvious debugging, workarounds, or trial-and-error discovery. Creates new Claude Code
-  skills when valuable, reusable knowledge is identified.
-author: Claude Code
-version: 3.0.0
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Grep
-  - Glob
-  - WebSearch
-  - WebFetch
-  - Skill
-  - AskUserQuestion
-  - TodoWrite
+description: "Extracts reusable knowledge from work sessions and codifies it into Claude Code skills. Use when: (1) /claudeception command to review session learnings, (2) save this as a skill or extract a skill from this, (3) what did we learn?, (4) after non-obvious debugging, workarounds, or trial-and-error discovery. Evaluates whether current work contains extractable knowledge, checks for existing skills, and creates or updates skills following the skill-authoring best practices."
+metadata:
+  version: 3.2.0
 ---
 
 # Claudeception
@@ -112,115 +96,40 @@ Analyze what was learned:
 
 ### Step 3: Research Best Practices (When Appropriate)
 
-Before creating the skill, search the web for current information when:
+Search the web for technology-specific best practices when the topic involves specific
+frameworks, libraries, or tools. Skip for project-specific internal patterns.
 
-**Always search for:**
-- Technology-specific best practices (frameworks, libraries, tools)
-- Current documentation or API changes
-- Common patterns or solutions for similar problems
-- Known gotchas or pitfalls in the problem domain
-- Alternative approaches or solutions
+**Search strategy:** `"[technology] [problem] best practices 2026"` → incorporate into
+Solution section, add source URLs to References section.
 
-**When to search:**
-- The topic involves specific technologies, frameworks, or tools
-- You're uncertain about current best practices
-- The solution might have changed after January 2025 (knowledge cutoff)
-- There might be official documentation or community standards
-- You want to verify your understanding is current
+### Step 4: Structure and Save the Skill
 
-**When to skip searching:**
-- Project-specific internal patterns unique to this codebase
-- Solutions that are clearly context-specific and wouldn't be documented
-- Generic programming concepts that are stable and well-understood
-- Time-sensitive situations where the skill needs to be created immediately
+**Use the `skill-authoring` skill** for the complete authoring workflow: frontmatter rules,
+directory layout (SKILL.md + scripts/ + references/), description writing, template,
+and quality checklist.
 
-**Search strategy:**
-```
-1. Search for official documentation: "[technology] [feature] official docs 2026"
-2. Search for best practices: "[technology] [problem] best practices 2026"
-3. Search for common issues: "[technology] [error message] solution 2026"
-4. Review top results and incorporate relevant information
-5. Always cite sources in a "References" section of the skill
-```
+**Key rules (quick reference):**
+- Frontmatter: only `name`, `description`, `version` (no author, date, tags)
+- Description: third person, ≤1024 chars, numbered trigger conditions
+- SKILL.md body: ≤500 lines, extract lookup material to `references/`
+- Scripts: add `--help`, error handling, `chmod +x`
+- Save: project-specific → `.claude/skills/`, user-wide → `~/.claude/skills/`
 
-**Example searches:**
-- "Next.js getServerSideProps error handling best practices 2026"
-- "Claude Code skill description semantic matching 2026"
-- "React useEffect cleanup patterns official docs 2026"
+### Step 5: Update Project Artifacts
 
-**Integration with skill content:**
-- Add a "References" section at the end of the skill with source URLs
-- Incorporate best practices into the "Solution" section
-- Include warnings about deprecated patterns in the "Notes" section
-- Mention official recommendations where applicable
+After saving skill changes, update project-level artifacts that track changes:
 
-### Step 4: Structure the Skill
+1. **CHANGELOG.md** — Add entries under `[Unreleased]` for:
+   - New skills → `### Added` section
+   - Updated skills → `### Documentation` section
+   - Script fixes bundled with skill updates → `### Fixed` section
+2. **Commit message** — Use `docs(skills):` prefix for skill-only changes,
+   or `fix(skills):` if a script bug was also fixed
 
-Create a new skill with this structure:
-
-```markdown
----
-name: [descriptive-kebab-case-name]
-description: |
-  [Precise description including: (1) exact use cases, (2) trigger conditions like 
-  specific error messages or symptoms, (3) what problem this solves. Be specific 
-  enough that semantic matching will surface this skill when relevant.]
-author: [original-author or "Claude Code"]
-version: 1.0.0
-date: [YYYY-MM-DD]
----
-
-# [Skill Name]
-
-## Problem
-[Clear description of the problem this skill addresses]
-
-## Context / Trigger Conditions  
-[When should this skill be used? Include exact error messages, symptoms, or scenarios]
-
-## Solution
-[Step-by-step solution or knowledge to apply]
-
-## Verification
-[How to verify the solution worked]
-
-## Example
-[Concrete example of applying this skill]
-
-## Notes
-[Any caveats, edge cases, or related considerations]
-
-## References
-[Optional: Links to official documentation, articles, or resources that informed this skill]
-```
-
-### Step 5: Write Effective Descriptions
-
-The description field is critical for skill discovery. Include:
-
-- **Specific symptoms**: Exact error messages, unexpected behaviors
-- **Context markers**: Framework names, file types, tool names
-- **Action phrases**: "Use when...", "Helps with...", "Solves..."
-
-Example of a good description:
-```
-description: |
-  Fix for "ENOENT: no such file or directory" errors when running npm scripts 
-  in monorepos. Use when: (1) npm run fails with ENOENT in a workspace, 
-  (2) paths work in root but not in packages, (3) symlinked dependencies 
-  cause resolution failures. Covers node_modules resolution in Lerna, 
-  Turborepo, and npm workspaces.
-```
-
-### Step 6: Save the Skill
-
-Save new skills to the appropriate location:
-
-- **Project-specific skills**: `.claude/skills/[skill-name]/SKILL.md`
-- **User-wide skills**: `~/.claude/skills/[skill-name]/SKILL.md`
-
-Include any supporting scripts in a `scripts/` subdirectory if the skill benefits from 
-executable helpers.
+**Why this step exists:** Skill extraction focuses on the SKILL.md files and scripts,
+making it easy to forget that the project's CHANGELOG.md also needs to reflect these
+changes. Without this step, skill updates get committed without any changelog entry,
+violating project conventions.
 
 ## Retrospective Mode
 
@@ -256,102 +165,26 @@ When extracting skills, also consider:
 
 ## Quality Gates
 
-Before finalizing a skill, verify:
+**Use the `skill-authoring` skill's quality checklist** for the full pre-publish verification.
 
-- [ ] Description contains specific trigger conditions
-- [ ] Solution has been verified to work
-- [ ] Content is specific enough to be actionable
-- [ ] Content is general enough to be reusable
-- [ ] No sensitive information (credentials, internal URLs) is included
-- [ ] Skill doesn't duplicate existing documentation or skills
-- [ ] Web research conducted when appropriate (for technology-specific topics)
-- [ ] References section included if web sources were consulted
-- [ ] Current best practices (post-2025) incorporated when relevant
-
-## Anti-Patterns to Avoid
-
-- **Over-extraction**: Not every task deserves a skill. Mundane solutions don't need preservation.
-- **Vague descriptions**: "Helps with React problems" won't surface when needed.
-- **Unverified solutions**: Only extract what actually worked.
-- **Documentation duplication**: Don't recreate official docs; link to them and add what's missing.
-- **Stale knowledge**: Mark skills with versions and dates; knowledge can become outdated.
-
-## Skill Lifecycle
-
-Skills should evolve:
-
-1. **Creation**: Initial extraction with documented verification
-2. **Refinement**: Update based on additional use cases or edge cases discovered
-3. **Deprecation**: Mark as deprecated when underlying tools/patterns change
-4. **Archival**: Remove or archive skills that are no longer relevant
+Quick check before saving:
+- [ ] Knowledge is reusable, non-trivial, specific, and verified
+- [ ] No sensitive information (credentials, internal URLs)
+- [ ] Doesn't duplicate existing skills (Step 1 search completed)
+- [ ] SKILL.md follows `skill-authoring` frontmatter and structure rules
+- [ ] CHANGELOG.md `[Unreleased]` updated with skill changes (Step 5)
 
 ## Example: Complete Extraction Flow
 
-**Scenario**: While debugging a Next.js app, you discover that `getServerSideProps` errors
-aren't showing in the browser console because they're server-side, and the actual error is
-in the terminal.
+**Scenario**: Discovered `getServerSideProps` errors don't appear in browser console.
 
-**Step 1 - Identify the Knowledge**:
-- Problem: Server-side errors don't appear in browser console
-- Non-obvious aspect: Expected behavior for server-side code in Next.js
-- Trigger: Generic error page with empty browser console
+1. **Identify**: Problem = server-side errors invisible in browser. Trigger = empty console + error page.
+2. **Research**: Searched "Next.js getServerSideProps error handling 2026" → found official patterns.
+3. **Structure**: Created `~/.claude/skills/nextjs-server-side-error-debugging/SKILL.md`
+   with trigger conditions, solution steps, and References section linking to official docs.
+4. **Verify**: Tested with real Next.js error → confirmed terminal shows stack trace.
 
-**Step 2 - Research Best Practices**:
-Search: "Next.js getServerSideProps error handling best practices 2026"
-- Found official docs on error handling
-- Discovered recommended patterns for try-catch in data fetching
-- Learned about error boundaries for server components
-
-**Step 3-5 - Structure and Save**:
-
-**Extraction**:
-
-```markdown
----
-name: nextjs-server-side-error-debugging
-description: |
-  Debug getServerSideProps and getStaticProps errors in Next.js. Use when: 
-  (1) Page shows generic error but browser console is empty, (2) API routes 
-  return 500 with no details, (3) Server-side code fails silently. Check 
-  terminal/server logs instead of browser for actual error messages.
-author: Claude Code
-version: 1.0.0
-date: 2024-01-15
----
-
-# Next.js Server-Side Error Debugging
-
-## Problem
-Server-side errors in Next.js don't appear in the browser console, making 
-debugging frustrating when you're looking in the wrong place.
-
-## Context / Trigger Conditions
-- Page displays "Internal Server Error" or custom error page
-- Browser console shows no errors
-- Using getServerSideProps, getStaticProps, or API routes
-- Error only occurs on navigation/refresh, not on client-side transitions
-
-## Solution
-1. Check the terminal where `npm run dev` is running—errors appear there
-2. For production, check server logs (Vercel dashboard, CloudWatch, etc.)
-3. Add try-catch with console.error in server-side functions for clarity
-4. Use Next.js error handling: return `{ notFound: true }` or `{ redirect: {...} }` 
-   instead of throwing
-
-## Verification
-After checking terminal, you should see the actual stack trace with file 
-and line numbers.
-
-## Notes
-- This applies to all server-side code in Next.js, not just data fetching
-- In development, Next.js sometimes shows a modal with partial error info
-- The `next.config.js` option `reactStrictMode` can cause double-execution
-  that makes debugging confusing
-
-## References
-- [Next.js Data Fetching: getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props)
-- [Next.js Error Handling](https://nextjs.org/docs/pages/building-your-application/routing/error-handling)
-```
+See `examples/` directory for complete sample skills.
 
 ## Integration with Workflow
 
@@ -387,3 +220,7 @@ If yes to any, invoke this skill immediately.
 
 Remember: The goal is continuous, autonomous improvement. Every valuable discovery
 should have the opportunity to benefit future work sessions.
+
+## See Also
+- `skill-authoring` — how to structure, write, and optimize skills (the HOW)
+- Anthropic docs: [Skill authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)
